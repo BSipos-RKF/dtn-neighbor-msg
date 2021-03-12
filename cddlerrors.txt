@@ -25,4 +25,4 @@
 *** Unused rule ext-data-previous-node
 *** Unused rule ext-data-bundle-age
 *** Unused rule ext-data-hop-count
-{1: 1, -1: 868, -5: [{1: 2, 2: ["tic", "tac", "toe", "tic"], 3: [h'D06122DE', h'10797B83', h'2D7BBF9C', h'0EFDEA4BAD4F92D5F0DCFF5C82DBE54B'], 4: 5357, 5: false}]}
+{1: 1, -1: 1635, -5: [{1: 2, 2: ["tic"], 3: [h'CD3DF4C736E0862ABFAF6893C7029639']}, {1: 1, 3: [h'6870A03EA53F392EF3A4993CE93549BB', h'B016DADBC9D280B5FA16CD092C80ED17', h'2F54C246'], 4: 18044, 5: false}, {1: 2}, {1: 1, 3: [h'12FA01FA', h'3A6EA23B', h'20E34058', h'BEF54D152E01BF81001FA0E6FCF5104A'], 4: 45615}]}
