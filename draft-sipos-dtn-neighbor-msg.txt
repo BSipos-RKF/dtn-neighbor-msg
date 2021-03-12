@@ -1,0 +1,1008 @@
+
+
+
+
+Delay-Tolerant Networking                                       B. Sipos
+Internet-Draft                                           RKF Engineering
+Updates: I-D.ietf-dtn-bpbis (if approved)                7 February 2021
+Intended status: Standards Track                                        
+Expires: 11 August 2021
+
+
+         Delay-Tolerant Networking Neighbor Messaging Protocol
+                    draft-sipos-dtn-neighbor-msg-00
+
+Abstract
+
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 11 August 2021.
+
+Copyright Notice
+
+   Copyright (c) 2021 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Simplified BSD License text
+   as described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 1]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+     1.1.  Scope . . . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.2.  Use of CDDL . . . . . . . . . . . . . . . . . . . . . . .   4
+     1.3.  Requirements Language . . . . . . . . . . . . . . . . . .   4
+     1.4.  Definitions Specific to This Protocol . . . . . . . . . .   4
+     1.5.  Relationship to other Discovery Protocols . . . . . . . .   4
+   2.  DTN Neighbor Endpoint . . . . . . . . . . . . . . . . . . . .   4
+   3.  Neighbor Bundle Security  . . . . . . . . . . . . . . . . . .   5
+     3.1.  PKI Advertisement . . . . . . . . . . . . . . . . . . . .   5
+   4.  Neighbor Message  . . . . . . . . . . . . . . . . . . . . . .   6
+     4.1.  Map Key Conventions . . . . . . . . . . . . . . . . . . .   6
+     4.2.  Convergence Layer Parameterization  . . . . . . . . . . .   6
+       4.2.1.  TCPCLv4 . . . . . . . . . . . . . . . . . . . . . . .   8
+       4.2.2.  UDPCL . . . . . . . . . . . . . . . . . . . . . . . .   9
+     4.3.  HELLO Message . . . . . . . . . . . . . . . . . . . . . .   9
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . .  11
+     5.1.  Threat: Passive Leak of Node Data . . . . . . . . . . . .  11
+     5.2.  Messaging Without Authentication  . . . . . . . . . . . .  11
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
+     6.1.  Well-Known DTN Endpoints  . . . . . . . . . . . . . . . .  11
+     6.2.  NMP Message Type  . . . . . . . . . . . . . . . . . . . .  12
+     6.3.  NMP Convergence Layer Type  . . . . . . . . . . . . . . .  13
+   7.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .  13
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  13
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . .  13
+     8.2.  Informative References  . . . . . . . . . . . . . . . . .  16
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  18
+
+1.  Introduction
+
+   This document describes the Neighbor Messaging Protocol (NMP) for
+   Delay-Tolerant Networking.  Delay-Tolerant Networking is an end-to-
+   end architecture providing communications in and/or through highly
+   stressed environments, including those with intermittent
+   connectivity, long and/or variable delays, and high bit error rates.
+   More detailed descriptions of the rationale and capabilities of these
+   networks can be found in "Delay-Tolerant Network Architecture"
+   [RFC4838].
+
+   The locations of Neighbor Messaging Protocol and the BP in the
+   Internet model protocol stack (described in [RFC1122]) are shown in
+   Figure 1.  Of note is that all NMP activities occur above the BP
+   layer, which means that unlike earlier proposals
+   [I-D.irtf-dtnrg-ipnd] this NMP can be transported over any CL
+   available to a BP agent.  This protocol is not tied to any specific
+   CL, though it does rely on characteristics of CLs for certain
+   functions (i.e., multicast capability).
+
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 2]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+            +-------------------------+
+            |   Neighbor Messaging    | -\
+            +-------------------------|   |
+            |  Bundle Protocol (BP)   |   -> Application Layer
+            +-------------------------+   |
+            | Convergence Layer (CL)  | -/
+            +-------------------------+
+            |       TCP/UDP/etc.      | ---> Transport Layer
+            +-------------------------+
+            |        IPv4/IPv6        | ---> Network Layer
+            +-------------------------+
+            |   Link-Layer Protocol   | ---> Link Layer
+            +-------------------------+
+
+        Figure 1: The Locations of the DTN Neighbor Messaging and BP
+                     above the Internet Protocol Stack
+
+1.1.  Scope
+
+   This document describes the format of the protocol data units passed
+   between BP agents for next-hop neighbor messaging.  This document
+   does not address:
+
+   *  The format of protocol data units of the Bundle Protocol, as those
+      are defined elsewhere in [I-D.ietf-dtn-bpbis].  This includes the
+      concept of bundle fragmentation or bundle encapsulation.
+
+   *  Logic for routing bundles along a path toward a bundle's endpoint.
+      This messaging protocol is one-hop bundle messaging and cannot be
+      forwarded.
+
+   *  Policies or mechanisms for issuing Public Key Infrastructure Using
+      X.509 (PKIX) certificates; provisioning, deploying, or accessing
+      certificates and private keys; deploying or accessing certificate
+      revocation lists (CRLs); or configuring security parameters on an
+      individual entity or across a network.
+
+   *  Uses of Bundle Protocol Security (BPSec) in which authentication
+      of the Source Node ID is not possible (see Section 5.2).
+
+   Any UDPCL implementation requires a BP agent to perform those above
+   listed functions in order to perform end-to-end bundle delivery.
+
+
+
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 3]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+1.2.  Use of CDDL
+
+   This document defines CBOR structure using the Concise Data
+   Definition Language (CDDL) of [RFC8610].  The entire CDDL structure
+   can be extracted from the XML version of this document using the
+   XPath expression:
+
+   '//sourcecode[@type="cddl"]'
+
+   The following initial fragment defines the top-level symbols of this
+   document's CDDL, including the ASB data structure with its parameter/
+   result sockets.
+
+   nmp-start = nmp-msg
+
+1.3.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+1.4.  Definitions Specific to This Protocol
+
+   This section contains definitions specific to the DTN Neighbor
+   Messaging Protocol.
+
+                                    TBD
+
+             Figure 2: The relationships between DTN neighbors
+
+1.5.  Relationship to other Discovery Protocols
+
+   Many of the structural, behavioral, and especially timing definitions
+   in this specification follow the model of MANET messaging [RFC5444]
+   and MANET NHDP [RFC6130] in both terminology and semantics.  This is
+   intentional to allow an implementer to understand DTN discovery with
+   very similar logic to MANET discovery.  Where the NHDP is concerned
+   with IP routers discovering reachable IP routes, the NMP is concerned
+   with DTN nodes discovering reachable bundle routes.
+
+2.  DTN Neighbor Endpoint
+
+   This specification updates the "dtn" URI scheme defined in
+   [I-D.ietf-dtn-bpbis] to expand the set of well-known endpoint names
+   from the single "none" value to an IANA-controlled table of names
+   Section 6.1.
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 4]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   An additional well-known endpoint "dtn:~neighbor" is defined to be
+   used for multicast transfers to next-hop nodes.  This endpoint
+   scheme-specific part has a shortened integer encoding as defined in
+   Table 1.  For the remainder of this document a bundle with this
+   endpoint as a destination will be referred to as a Neighbor Bundle.
+
+   A Neighbor Bundle is intended to exist for only a single transfer
+   hop.  That doesn't prohibit a single outgoing message from being
+   conveyed over multiple CLs (which is distinct from a single CL with
+   multicast behavior).  A Neighbor Bundle SHALL NOT be forwarded by any
+   node.  The source of a Neighbor Bundle is always the sender of the
+   bundle, it SHALL NOT contain a Previous Node block.  A Neighbor
+   Bundle SHALL NOT contain a Hop Count block, as the implicit Hop Limit
+   is 1 and Hop Count is 0.  A Neighbor Bundle SHALL be delivered to the
+   administrative element of the receiving node.  The primary block of a
+   Neighbor Bundle SHALL NOT be marked with the administrative flag, as
+   the destination is not a Node ID.
+
+   The payload data of a Neighbor Bundle SHALL contain the encoded
+   Neighbor Message as defined in Section 4.
+
+3.  Neighbor Bundle Security
+
+   All Neighbor Bundles SHALL contain a BPSec BIB targeting the payload
+   block.  If the BIB targeting the payload block does not include the
+   primary block as additional authenticated data (AAD) then the BIB
+   SHALL also target the primary block.  The BIB MAY target any other
+   blocks in the Neighbor Bundle.
+
+3.1.  PKI Advertisement
+
+   This section applies to BIB security contexts which use any public
+   key infrastructure (PKI), including PKIX and bare public keys.
+
+   When a sequence of Neighbor Bundles is all signed by the same key
+   material with an end-entity PKIX certificate bearing the public key,
+   the source node MAY include the certificate chain only in specific
+   bundles of the sequence.  Receivers of Neighbor Bundles SHALL retain
+   certificate chains associated with a Source Node ID for a period of
+   time.  The maximum time duration between bundles including the
+   certificate chain is referred to here as the PUBLIC_KEY_INTERVAL.
+   The PUBLIC_KEY_INTERVAL value SHOULD be some multiple of the
+   messaging interval greater than or equal to 1.
+
+   BIB-signed Neighbor Bundles MAY also contain any certificate chains
+   related to bundle confidentiality when the source node is to be used
+   as a BCB security target.
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 5]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+4.  Neighbor Message
+
+   A Neighbor Message SHALL consist of a CBOR map containing at least
+   one pair.  All keys in the Neighbor Message map SHALL be CBOR int
+   (unsigned or negative) items.  That minimum Neighbor Message pair
+   SHALL be the Message Type identifier.  The remaining pairs SHALL be
+   interpreted according to the Message Type.
+
+   ; Top-level message structure
+   nmp-msg = $nmp-msg .within nmp-msg-structure
+   nmp-msg-structure = {
+       cl-key-type<int>,
+       * label => value,
+   }
+   ; Common parameters for Message map
+   msg-key-type<val> = (
+       1: val,
+   )
+
+                                  Figure 3
+
+4.1.  Map Key Conventions
+
+   This specification follows the pattern of [RFC8152] to use positive-
+   valued map keys to indicate common parameters and negative-valued map
+   keys to indicate type-specific parameters.  This convention also
+   applies to subordinate maps within NMP messages.
+
+   ; Generic map label
+   label = int
+   ; Generic map value
+   value = any
+
+                                  Figure 4
+
+4.2.  Convergence Layer Parameterization
+
+   Where the NHDP is concerned with interfaces supporting IP addresses,
+   with relatively few parameterizations, the NMP must convey CL
+   information needed to send bundles to the node-being-discovered.
+   Because different CLs are likely to have varying parameter sets, each
+   CL is encoded as a CBOR map following the conventions of Section 4.1.
+   There are several common CL parameters related to network- and
+   transport-layer: a DNS name or IPv4/IPv6 address used to communicate
+   with the node, and information about transport security policy.
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 6]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   It is also an important distinction that the CL parameterization is
+   about the capability of delivering bundles to the discovered node.
+   It is not about ability of the node to transmit bundles, which may in
+   fact be more broad than its ability to receive.  For example, in the
+   situation where a node has an ephemeral IP address and no DNS name
+   that node may not listen with any CL yet, because some CLs are
+   bidirectional, it may have symmetric (BP layer) connectivity to some
+   set of peer nodes.  Even in that case there is still value in
+   discovering the presence of the non-listening node because there is
+   the potential for a contact (coming from that node) to allow bundle
+   routes to other nodes "behind" that non-listening node.
+
+   The common CL parameters are listed below and correspond with the
+   CDDL of Figure 5.
+
+   CL Type:  This item contains a CBOR int value identifying the type of
+      CL being defined.  Possible CL Type values are defined
+      Section 6.3.
+
+   DNS Name:  This item contains a CBOR tstr value containing the fully
+      qualified domain name (FQDN) which resolves to an address on which
+      the CL is listening.
+
+   IP Address:  This item contains a CBOR bstr value containing the
+      address in network byte order (big-endian), which is either 4
+      octets for IPv4 or 16 octets for IPv6 address.
+
+   Port Number:  This item contains a CBOR uint value indicating the
+      transport-layer port number.  If this parameter is absent the
+      default (i.e., IANA assigned) port number is used.
+
+   Transport Security Required:  This item contains a CBOR bool value
+      indicating whether transport security is required (true) or
+      prohibited (false).  If this parameter is absent there is no
+      information about the required policy.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 7]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   ; Convergence Layer (CL) structure
+   cl-listen = $cl-listen .within cl-listen-structure
+   cl-listen-structure = {
+       cl-key-type<int>,
+       * label => value,
+   }
+   ; Common parameters for CL map
+   cl-key-type<val> = (
+       1: val,
+   )
+
+   cl-dns-name-list = (
+       2: [1*tstr],
+   )
+
+   cl-net-addr-list = (
+       3: [1*net-address],
+   )
+   net-address = ipv4-address / ipv6-address
+   ipv4-address = bstr .size 4
+   ipv6-address = bstr .size 16
+
+   cl-transport-port = (
+       4: uint .lt 0xFFFF
+   )
+
+   cl-transport-sec-require = (
+       5: bool
+   )
+
+                Figure 5: CL Structure and Common Parameters
+
+4.2.1.  TCPCLv4
+
+   This CL Type specifically refers to the TCPCL of
+   [I-D.ietf-dtn-tcpclv4].  One of the DNS Name or IP Address parameters
+   SHALL be present for this CL.  If both DNS Name and IP Address are
+   present it is an implementation matter to choose which one to attempt
+   first, and whether multiple attempts are made.  The Transport
+   Security Required parameter SHALL indicate both the Contact Header
+   USE_TLS flag and the post-negotiation policy enforcement (i.e., when
+   the session will be disallowed).  More TBD.
+
+
+
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 8]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   $cl-listen /= {
+       cl-key-type<1>,
+       ? cl-dns-name-list,
+       ? cl-net-addr-list,
+       ? cl-transport-port,
+       ? cl-transport-sec-require,
+   }
+
+4.2.2.  UDPCL
+
+   This CL Type specifically refers to the UDPCL of TBD.  One of the DNS
+   Name or IP Address parameters SHALL be present for this CL.  If both
+   DNS Name and IP Address are present it is an implementation matter to
+   choose which one to attempt first, and whether multiple attempts are
+   made.  The Transport Security Required parameter SHALL indicate the
+   need for DTLS security when receiving CL messages.  More TBD.
+
+   $cl-listen /= {
+       cl-key-type<2>,
+       ? cl-dns-name-list,
+       ? cl-net-addr-list,
+       ? cl-transport-port,
+       ? cl-transport-sec-require,
+   }
+
+4.3.  HELLO Message
+
+   The HELLO message is variable sized and indicates the CLs supported
+   by the transmitting node and of all the neighbors known to the
+   transmitting node.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                 [Page 9]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   ; HELLO message content
+   $nmp-msg /= hello-msg
+   hello-msg = {
+       msg-key-type<1>,
+       hello-validity-time,
+       ? hello-interval-time,
+       hello-clset,
+       ? hello-nodeset,
+       ? hello-peerset,
+   }
+   ; Message-type-specific parameters
+   hello-validity-time = (
+       -1: time-duration,
+   )
+   hello-interval-time = (
+       -2: time-duration,
+   )
+   ; Duration in DTN units of milliseconds
+   time-duration = uint
+
+   hello-clset = (
+       -5: [1*cl-listen],
+   )
+
+   hello-nodeset = (
+       -3: [1*hello-node],
+   )
+   hello-node = [
+       nodeid: eid,
+       clset: [1*cl-listen]
+   ]
+
+   hello-peerset = (
+       -6: [*hello-peer],
+   )
+   hello-peer = [
+       nodeid: eid,
+       status: hello-link-status,
+   ]
+   hello-link-status = &(
+       HEARD: 1,
+       SYMMETRIC: 2,
+       LOST: 3,
+   )
+
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                [Page 10]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+5.  Security Considerations
+
+   This section separates security considerations into threat categories
+   based on guidance of BCP 72 [RFC3552].
+
+5.1.  Threat: Passive Leak of Node Data
+
+
+5.2.  Messaging Without Authentication
+
+   In environments where PKI is not available, the NMP
+
+6.  IANA Considerations
+
+   Registration procedures referred to in this section are defined in
+   [RFC8126].
+
+6.1.  Well-Known DTN Endpoints
+
+   EDITOR NOTE: sub-registry to-be-created upon publication of this
+   specification.
+
+   IANA will create, under the "Bundle Protocol" registry [IANA-BUNDLE],
+   a sub-registry titled "Well-Known DTN Endpoints" and initialize it
+   with the contents of Table 1.  The registration procedure is Expert
+   Review.  Because any service name can be encoded as a text string,
+   there is no provision for private or experimental registrations.
+
+   Specifications of new well-known DTN endpoints need to define the
+   encoded (uint) value as well as the meaning of the service.
+   Specifications need to define how it should be used by BP agents and
+   if there are any special restrictions on how bundles are to be
+   treated (either routing or delivery) when this endpoint is used as a
+   bundle destination.
+
+   Expert(s) are encouraged to be biased towards approving registrations
+   unless they are abusive, frivolous, or actively harmful (not merely
+   aesthetically displeasing, or architecturally dubious).
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                [Page 11]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+              +========+============+======================+
+              | Code   | Text Value | Reference            |
+              +========+============+======================+
+              | 0      | none       | [I-D.ietf-dtn-bpbis] |
+              +--------+------------+----------------------+
+              | TBD    | ~neighbor  | This specification   |
+              +--------+------------+----------------------+
+              | others | unassigned |                      |
+              +--------+------------+----------------------+
+
+                    Table 1: Well-Known DTN Endpoints
+
+6.2.  NMP Message Type
+
+   EDITOR NOTE: sub-registry to-be-created upon publication of this
+   specification.
+
+   IANA will create, under the "Bundle Protocol" registry [IANA-BUNDLE],
+   a sub-registry titled "NMP Message Type" and initialize it with the
+   contents of Table 2.  For positive code points the registration
+   procedure is Specification Required.  Negative code points are
+   reserved for use on private networks for functions not published to
+   the IANA.
+
+   Specifications of new message types need to define the Message Type
+   value (an int), as well as the other message parameters required and
+   allowed.  Specifications need to define how those CBOR parameters are
+   used by a BP agent to relate the encoded message to the agent's
+   information bases.
+
+   Expert(s) are encouraged to be biased towards approving registrations
+   unless they are abusive, frivolous, or actively harmful (not merely
+   aesthetically displeasing, or architecturally dubious).
+
+       +==========+==========================+=====================+
+       | Code     | Name                     | Reference           |
+       +==========+==========================+=====================+
+       | negative | Private/Experimental Use | This specification. |
+       +----------+--------------------------+---------------------+
+       | 0        | reserved                 | This specification. |
+       +----------+--------------------------+---------------------+
+       | 1        | HELLO                    | This specification. |
+       +----------+--------------------------+---------------------+
+       | others   | unassigned               |                     |
+       +----------+--------------------------+---------------------+
+
+                         Table 2: NMP Message Type
+
+
+
+
+Sipos                    Expires 11 August 2021                [Page 12]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+6.3.  NMP Convergence Layer Type
+
+   EDITOR NOTE: sub-registry to-be-created upon publication of this
+   specification.
+
+   IANA will create, under the "Bundle Protocol" registry [IANA-BUNDLE],
+   a sub-registry titled "NMP Convergence Layer Type" and initialize it
+   with the contents of Table 3.  For positive code points the
+   registration procedure is Specification Required.  Negative code
+   points are reserved for use on private networks for functions not
+   published to the IANA.
+
+   Specifications of new CL types need to define the CL Type value (an
+   int), as well as the other CL parameters required and allowed.
+   Specifications need to define how those CBOR parameters are used by a
+   BP agent to transfer bundles to the referred-to CL.
+
+   Expert(s) are encouraged to be biased towards approving registrations
+   unless they are abusive, frivolous, or actively harmful (not merely
+   aesthetically displeasing, or architecturally dubious).
+
+       +==========+==========================+=====================+
+       | Code     | Name                     | Reference           |
+       +==========+==========================+=====================+
+       | negative | Private/Experimental Use | This specification. |
+       +----------+--------------------------+---------------------+
+       | 0        | reserved                 | This specification. |
+       +----------+--------------------------+---------------------+
+       | 1        | TCPCLv4                  | Section 4.2.1 of    |
+       |          |                          | this specification. |
+       +----------+--------------------------+---------------------+
+       | 2        | UDPCL                    | Section 4.2.2 of    |
+       |          |                          | this specification. |
+       +----------+--------------------------+---------------------+
+       | others   | unassigned               |                     |
+       +----------+--------------------------+---------------------+
+
+                    Table 3: NMP Convergence Layer Type
+
+7.  Acknowledgments
+
+   TBD
+
+8.  References
+
+8.1.  Normative References
+
+
+
+
+
+Sipos                    Expires 11 August 2021                [Page 13]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   [IANA-BUNDLE]
+              IANA, "Bundle Protocol",
+              <https://www.iana.org/assignments/bundle/>.
+
+   [IANA-IPv4-MCAST]
+              IANA, "IPv4 Multicast Address Space Registry",
+              <https://www.iana.org/assignments/multicast-addresses/>.
+
+   [IANA-IPv6-MCAST]
+              IANA, "IPv6 Multicast Address Space Registry",
+              <https://www.iana.org/assignments/ipv6-multicast-
+              addresses/>.
+
+   [RFC0768]  Postel, J., "User Datagram Protocol", STD 6, RFC 768,
+              DOI 10.17487/RFC0768, August 1980,
+              <https://www.rfc-editor.org/info/rfc768>.
+
+   [RFC1122]  Braden, R., Ed., "Requirements for Internet Hosts -
+              Communication Layers", STD 3, RFC 1122,
+              DOI 10.17487/RFC1122, October 1989,
+              <https://www.rfc-editor.org/info/rfc1122>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
+              Resource Identifier (URI): Generic Syntax", STD 66,
+              RFC 3986, DOI 10.17487/RFC3986, January 2005,
+              <https://www.rfc-editor.org/info/rfc3986>.
+
+   [RFC5050]  Scott, K. and S. Burleigh, "Bundle Protocol
+              Specification", RFC 5050, DOI 10.17487/RFC5050, November
+              2007, <https://www.rfc-editor.org/info/rfc5050>.
+
+   [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
+              Housley, R., and W. Polk, "Internet X.509 Public Key
+              Infrastructure Certificate and Certificate Revocation List
+              (CRL) Profile", RFC 5280, DOI 10.17487/RFC5280, May 2008,
+              <https://www.rfc-editor.org/info/rfc5280>.
+
+   [RFC6125]  Saint-Andre, P. and J. Hodges, "Representation and
+              Verification of Domain-Based Application Service Identity
+              within Internet Public Key Infrastructure Using X.509
+              (PKIX) Certificates in the Context of Transport Layer
+              Security (TLS)", RFC 6125, DOI 10.17487/RFC6125, March
+              2011, <https://www.rfc-editor.org/info/rfc6125>.
+
+
+
+Sipos                    Expires 11 August 2021                [Page 14]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   [RFC6347]  Rescorla, E. and N. Modadugu, "Datagram Transport Layer
+              Security Version 1.2", RFC 6347, DOI 10.17487/RFC6347,
+              January 2012, <https://www.rfc-editor.org/info/rfc6347>.
+
+   [RFC6960]  Santesson, S., Myers, M., Ankney, R., Malpani, A.,
+              Galperin, S., and C. Adams, "X.509 Internet Public Key
+              Infrastructure Online Certificate Status Protocol - OCSP",
+              RFC 6960, DOI 10.17487/RFC6960, June 2013,
+              <https://www.rfc-editor.org/info/rfc6960>.
+
+   [RFC7525]  Sheffer, Y., Holz, R., and P. Saint-Andre,
+              "Recommendations for Secure Use of Transport Layer
+              Security (TLS) and Datagram Transport Layer Security
+              (DTLS)", BCP 195, RFC 7525, DOI 10.17487/RFC7525, May
+              2015, <https://www.rfc-editor.org/info/rfc7525>.
+
+   [RFC8085]  Eggert, L., Fairhurst, G., and G. Shepherd, "UDP Usage
+              Guidelines", BCP 145, RFC 8085, DOI 10.17487/RFC8085,
+              March 2017, <https://www.rfc-editor.org/info/rfc8085>.
+
+   [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
+              Writing an IANA Considerations Section in RFCs", BCP 26,
+              RFC 8126, DOI 10.17487/RFC8126, June 2017,
+              <https://www.rfc-editor.org/info/rfc8126>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8610]  Birkholz, H., Vigano, C., and C. Bormann, "Concise Data
+              Definition Language (CDDL): A Notational Convention to
+              Express Concise Binary Object Representation (CBOR) and
+              JSON Data Structures", RFC 8610, DOI 10.17487/RFC8610,
+              June 2019, <https://www.rfc-editor.org/info/rfc8610>.
+
+   [RFC8949]  Bormann, C. and P. Hoffman, "Concise Binary Object
+              Representation (CBOR)", STD 94, RFC 8949,
+              DOI 10.17487/RFC8949, December 2020,
+              <https://www.rfc-editor.org/info/rfc8949>.
+
+   [I-D.ietf-dtn-bpbis]
+              Burleigh, S., Fall, K., and E. Birrane, "Bundle Protocol
+              Version 7", Work in Progress, Internet-Draft, draft-ietf-
+              dtn-bpbis-31, 25 January 2021,
+              <https://tools.ietf.org/html/draft-ietf-dtn-bpbis-31>.
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                [Page 15]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   [I-D.ietf-dtn-bpsec]
+              Birrane, E. and K. McKeever, "Bundle Protocol Security
+              Specification", Work in Progress, Internet-Draft, draft-
+              ietf-dtn-bpsec-26, 8 January 2021,
+              <https://tools.ietf.org/html/draft-ietf-dtn-bpsec-26>.
+
+   [I-D.ietf-dtn-tcpclv4]
+              Sipos, B., Demmer, M., Ott, J., and S. Perreault, "Delay-
+              Tolerant Networking TCP Convergence Layer Protocol Version
+              4", Work in Progress, Internet-Draft, draft-ietf-dtn-
+              tcpclv4-24, 7 December 2020,
+              <https://tools.ietf.org/html/draft-ietf-dtn-tcpclv4-24>.
+
+8.2.  Informative References
+
+   [RFC2595]  Newman, C., "Using TLS with IMAP, POP3 and ACAP",
+              RFC 2595, DOI 10.17487/RFC2595, June 1999,
+              <https://www.rfc-editor.org/info/rfc2595>.
+
+   [RFC3552]  Rescorla, E. and B. Korver, "Guidelines for Writing RFC
+              Text on Security Considerations", BCP 72, RFC 3552,
+              DOI 10.17487/RFC3552, July 2003,
+              <https://www.rfc-editor.org/info/rfc3552>.
+
+   [RFC4511]  Sermersheim, J., Ed., "Lightweight Directory Access
+              Protocol (LDAP): The Protocol", RFC 4511,
+              DOI 10.17487/RFC4511, June 2006,
+              <https://www.rfc-editor.org/info/rfc4511>.
+
+   [RFC4838]  Cerf, V., Burleigh, S., Hooke, A., Torgerson, L., Durst,
+              R., Scott, K., Fall, K., and H. Weiss, "Delay-Tolerant
+              Networking Architecture", RFC 4838, DOI 10.17487/RFC4838,
+              April 2007, <https://www.rfc-editor.org/info/rfc4838>.
+
+   [RFC5444]  Clausen, T., Dearlove, C., Dean, J., and C. Adjih,
+              "Generalized Mobile Ad Hoc Network (MANET) Packet/Message
+              Format", RFC 5444, DOI 10.17487/RFC5444, February 2009,
+              <https://www.rfc-editor.org/info/rfc5444>.
+
+   [RFC5489]  Badra, M. and I. Hajjeh, "ECDHE_PSK Cipher Suites for
+              Transport Layer Security (TLS)", RFC 5489,
+              DOI 10.17487/RFC5489, March 2009,
+              <https://www.rfc-editor.org/info/rfc5489>.
+
+   [RFC6130]  Clausen, T., Dearlove, C., and J. Dean, "Mobile Ad Hoc
+              Network (MANET) Neighborhood Discovery Protocol (NHDP)",
+              RFC 6130, DOI 10.17487/RFC6130, April 2011,
+              <https://www.rfc-editor.org/info/rfc6130>.
+
+
+
+Sipos                    Expires 11 August 2021                [Page 16]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   [RFC6698]  Hoffman, P. and J. Schlyter, "The DNS-Based Authentication
+              of Named Entities (DANE) Transport Layer Security (TLS)
+              Protocol: TLSA", RFC 6698, DOI 10.17487/RFC6698, August
+              2012, <https://www.rfc-editor.org/info/rfc6698>.
+
+   [RFC7122]  Kruse, H., Jero, S., and S. Ostermann, "Datagram
+              Convergence Layers for the Delay- and Disruption-Tolerant
+              Networking (DTN) Bundle Protocol and Licklider
+              Transmission Protocol (LTP)", RFC 7122,
+              DOI 10.17487/RFC7122, March 2014,
+              <https://www.rfc-editor.org/info/rfc7122>.
+
+   [RFC7250]  Wouters, P., Ed., Tschofenig, H., Ed., Gilmore, J.,
+              Weiler, S., and T. Kivinen, "Using Raw Public Keys in
+              Transport Layer Security (TLS) and Datagram Transport
+              Layer Security (DTLS)", RFC 7250, DOI 10.17487/RFC7250,
+              June 2014, <https://www.rfc-editor.org/info/rfc7250>.
+
+   [RFC7435]  Dukhovni, V., "Opportunistic Security: Some Protection
+              Most of the Time", RFC 7435, DOI 10.17487/RFC7435,
+              December 2014, <https://www.rfc-editor.org/info/rfc7435>.
+
+   [RFC7457]  Sheffer, Y., Holz, R., and P. Saint-Andre, "Summarizing
+              Known Attacks on Transport Layer Security (TLS) and
+              Datagram TLS (DTLS)", RFC 7457, DOI 10.17487/RFC7457,
+              February 2015, <https://www.rfc-editor.org/info/rfc7457>.
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/info/rfc7942>.
+
+   [RFC8152]  Schaad, J., "CBOR Object Signing and Encryption (COSE)",
+              RFC 8152, DOI 10.17487/RFC8152, July 2017,
+              <https://www.rfc-editor.org/info/rfc8152>.
+
+   [RFC8899]  Fairhurst, G., Jones, T., Tüxen, M., Rüngeler, I., and T.
+              Völker, "Packetization Layer Path MTU Discovery for
+              Datagram Transports", RFC 8899, DOI 10.17487/RFC8899,
+              September 2020, <https://www.rfc-editor.org/info/rfc8899>.
+
+   [I-D.irtf-dtnrg-ipnd]
+              Ellard, D., Altmann, R., Gladd, A., Brown, D., and R.
+              Velt, "DTN IP Neighbor Discovery (IPND)", Work in
+              Progress, Internet-Draft, draft-irtf-dtnrg-ipnd-03, 10
+              November 2015,
+              <https://tools.ietf.org/html/draft-irtf-dtnrg-ipnd-03>.
+
+
+
+
+Sipos                    Expires 11 August 2021                [Page 17]
+
+Internet-Draft                   DTN NMP                   February 2021
+
+
+   [github-dtn-demo-agent]
+              Sipos, B., "DTN BPbis Example Implementation",
+              <https://github.com/BSipos-RKF/dtn-demo-agent/>.
+
+   [github-dtn-wireshark]
+              Sipos, B., "DTN BPbis Wireshark Dissector",
+              <https://github.com/BSipos-RKF/dtn-wireshark/>.
+
+Author's Address
+
+   Brian Sipos
+   RKF Engineering Solutions, LLC
+   7500 Old Georgetown Road
+   Suite 1275
+   Bethesda, MD 20814-6198
+   United States of America
+
+   Email: BSipos@rkf-eng.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sipos                    Expires 11 August 2021                [Page 18]

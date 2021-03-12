@@ -1,0 +1,117 @@
+
+nmp-start = nmp-msg
+        
+
+; Top-level message structure
+nmp-msg = $nmp-msg .within nmp-msg-structure
+nmp-msg-structure = {
+    cl-key-type<int>,
+    * label => value,
+}
+; Common parameters for Message map
+msg-key-type<val> = (
+    1: val,
+)
+        
+
+; Generic map label
+label = int
+; Generic map value
+value = any
+          
+
+; Convergence Layer (CL) structure
+cl-listen = $cl-listen .within cl-listen-structure
+cl-listen-structure = {
+    cl-key-type<int>,
+    * label => value,
+}
+; Common parameters for CL map
+cl-key-type<val> = (
+    1: val,
+)
+
+cl-dns-name-list = (
+    2: [1*tstr],
+)
+
+cl-net-addr-list = (
+    3: [1*net-address],
+)
+net-address = ipv4-address / ipv6-address
+ipv4-address = bstr .size 4
+ipv6-address = bstr .size 16
+
+cl-transport-port = (
+    4: uint .lt 0xFFFF
+)
+
+cl-transport-sec-require = (
+    5: bool
+)
+          
+
+$cl-listen /= {
+    cl-key-type<1>,
+    ? cl-dns-name-list,
+    ? cl-net-addr-list,
+    ? cl-transport-port,
+    ? cl-transport-sec-require,
+}
+          
+
+$cl-listen /= {
+    cl-key-type<2>,
+    ? cl-dns-name-list,
+    ? cl-net-addr-list,
+    ? cl-transport-port,
+    ? cl-transport-sec-require,
+}
+          
+
+
+; HELLO message content
+$nmp-msg /= hello-msg
+hello-msg = {
+    msg-key-type<1>,
+    hello-validity-time,
+    ? hello-interval-time,
+    hello-clset,
+    ? hello-nodeset,
+    ? hello-peerset,
+}
+; Message-type-specific parameters
+hello-validity-time = (
+    -1: time-duration,
+)
+hello-interval-time = (
+    -2: time-duration,
+)
+; Duration in DTN units of milliseconds
+time-duration = uint
+
+hello-clset = (
+    -5: [1*cl-listen],
+)
+
+hello-nodeset = (
+    -3: [1*hello-node],
+)
+hello-node = [
+    nodeid: eid,
+    clset: [1*cl-listen]
+]
+
+hello-peerset = (
+    -6: [*hello-peer],
+)
+hello-peer = [
+    nodeid: eid,
+    status: hello-link-status,
+]
+hello-link-status = &(
+    HEARD: 1,
+    SYMMETRIC: 2,
+    LOST: 3,
+)
+        
